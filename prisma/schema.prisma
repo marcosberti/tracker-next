@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts Account[]
+  currencies Currency[]
+  categories Category[]
+  movements Movement[]
+  fixedExpenses FixedExpense[]
+  installmentExpenses InstallmentExpense[]
+}
+
+model Account {
+  id       String  @id @default(cuid())
+  name     String
+  balance  Float   @default(0)
+  isMain   Boolean @default(false)
+  userId   String
+  currencyId String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency Currency @relation(fields: [currencyId], references: [id])
+
+  movements          Movement[]
+  fixedExpenses      FixedExpense[]
+  installmentExpenses InstallmentExpense[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Currency {
+  id   String @id @default(cuid())
+  name String
+  code String @unique
+
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accounts           Account[]
+  movements          Movement[]
+  fixedExpenses      FixedExpense[]
+  installmentExpenses InstallmentExpense[]
+}
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  icon  String
+  color String
+
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  movements          Movement[]
+  fixedExpenses      FixedExpense[]
+  installmentExpenses InstallmentExpense[]
+}
+
+model Movement {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  amount      Float
+  type        String
+  accountId   String
+  currencyId  String
+  categoryId  String
+
+  account  Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  currency Currency @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fixedExpenseId      String?
+  installmentExpenseId String?
+  fixedExpense        FixedExpense?      @relation(fields: [fixedExpenseId], references: [id])
+  installmentExpense  InstallmentExpense? @relation(fields: [installmentExpenseId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FixedExpense {
+  id         String  @id @default(cuid())
+  title      String
+  amount     Float
+  isActive   Boolean @default(true)
+  accountId  String
+  currencyId String
+  categoryId String
+
+  account  Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  currency Currency @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  movements Movement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InstallmentExpense {
+  id                 String @id @default(cuid())
+  title              String
+  totalAmount        Float
+  installmentAmount  Float
+  totalInstallments  Int
+  paidInstallments   Int    @default(0)
+  firstPaymentMonth  DateTime
+  accountId          String
+  currencyId         String
+  categoryId         String
+
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  account  Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  currency Currency @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  movements Movement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
