@@ -30,20 +30,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { IconDotsVertical } from "@tabler/icons-react";
 import { Pagination } from "@/components/ui/pagination";
-import { Account, Currency } from "@prisma/client";
 import { getPagination } from "@/lib/pagination";
 import { useRouter } from "next/navigation";
 import { MOVEMENT_TYPES } from "@/app/_schemas/movement";
 import { useState } from "react";
 import { MovementModal } from "./movement-modal";
-import { ScopedMovement } from "../page";
+import type { Movement, Account } from "../page";
 import { Icon } from "@/components/Icon";
 
 type MovementsListProps = {
-  account: Pick<Account, "id" | "name"> & {
-    currency: Pick<Currency, "id" | "code">;
-  };
-  movements: ScopedMovement[];
+  account: Account;
+  movements: Movement[];
   month: string;
   totalMovements: number;
   page: number;
@@ -56,7 +53,7 @@ export function MovementsList({
   page,
   totalMovements,
 }: MovementsListProps) {
-  const [movement, setMovement] = useState<ScopedMovement | null>(null);
+  const [movement, setMovement] = useState<Movement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const { totalPages } = getPagination(totalMovements, page);
   const router = useRouter();

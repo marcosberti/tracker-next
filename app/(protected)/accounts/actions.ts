@@ -23,14 +23,12 @@ export async function mutateAccount(initialState: any, formData: FormData) {
 
   try {
     const id = formData.get("id");
-    const accountData = {
-      ...result.data,
-    };
 
     if (id) {
-      await updateAccount(id as string, accountData);
+      const { name, isMain } = result.data;
+      await updateAccount(user.id, id as string, { name, isMain });
     } else {
-      await createAccount(accountData);
+      await createAccount(user.id, result.data);
     }
 
     revalidatePath("/accounts");

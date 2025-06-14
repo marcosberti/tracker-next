@@ -4,42 +4,79 @@ import { formatCurrency } from "@/lib/formatters";
 import { Card } from "@/components/ui/gradient-card";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { Category, Currency, Movement, User } from "@prisma/client";
+import {
+  Category,
+  Currency,
+  Prisma,
+  Movement as PrismaMovement,
+  User,
+} from "@prisma/client";
 import { getMonthStart, getMonthEnd } from "@/lib/dates";
 import { MonthFilter } from "./_components/month-filter";
 import { MovementsList } from "./_components/movements-list";
 import { ITEMS_PER_PAGE } from "@/lib/pagination";
 import { AccountHeader } from "./_components/header";
 import { MOVEMENT_TYPES } from "@/app/_schemas/movement";
+import { getLoggedUser } from "@/app/_db/session";
+import { getAccountById } from "@/app/_db/accounts";
+import {
+  getMovements,
+  getMovementsCount,
+  getMovementsTotals,
+} from "@/app/_db/movements";
 
-export type ScopedMovement = Pick<
-  Movement,
-  "id" | "title" | "amount" | "type" | "date" | "description"
-> & {
-  category: Pick<Category, "id" | "name" | "icon" | "color">;
-  currency: Pick<Currency, "id" | "code">;
+const ACCOUNT_SELECT = {
+  id: true,
+  name: true,
+  currency: {
+    select: {
+      id: true,
+      code: true,
+    },
+  },
 };
 
-async function getData(accountId: string, monthParam: string, page: number) {
-  throw new Error("Not implemented -> fetch account");
-  const session = await auth();
-  if (!session) {
-    return redirect("/login");
-  }
-  const user = session.user as User;
-  const account = await prisma.account.findUnique({
+export type Account = Prisma.AccountGetPayload<{
+  select: typeof ACCOUNT_SELECT;
+}>;
+
+const MOVEMENT_SELECT = {
+  id: true,
+  title: true,
+  amount: true,
+  type: true,
+  date: true,
+  description: true,
+  category: {
     select: {
       id: true,
       name: true,
-      currency: {
-        select: {
-          id: true,
-          code: true,
-        },
-      },
+      icon: true,
+      color: true,
     },
-    where: { id: accountId, userId: user.id },
-  });
+  },
+  currency: {
+    select: {
+      id: true,
+      code: true,
+    },
+  },
+};
+
+export type Movement = Prisma.MovementGetPayload<{
+  select: typeof MOVEMENT_SELECT;
+}>;
+
+async function getData(accountId: string, monthParam: string, page: number) {
+  const user = await getLoggedUser();
+
+  if (!user?.id) {
+    return redirect("/login");
+  }
+
+  const account = (await getAccountById(user.id, accountId, {
+    select: ACCOUNT_SELECT,
+  })) as unknown as Account;
 
   if (!account) {
     return redirect("/accounts");
@@ -51,32 +88,9 @@ async function getData(accountId: string, monthParam: string, page: number) {
   const end = getMonthEnd(year, month);
 
   const [movements, totalMovements, totals] = await Promise.all([
-    prisma.movement.findMany({
-      select: {
-        id: true,
-        title: true,
-        amount: true,
-        type: true,
-        date: true,
-        description: true,
-        category: {
-          select: {
-            id: true,
-            name: true,
-            icon: true,
-            color: true,
-          },
-        },
-        currency: {
-          select: {
-            id: true,
-            code: true,
-          },
-        },
-      },
+    getMovements(user.id, accountId, {
+      select: MOVEMENT_SELECT,
       where: {
-        accountId,
-        userId: user.id,
         date: {
           gte: start,
           lte: end,
@@ -87,29 +101,22 @@ async function getData(accountId: string, monthParam: string, page: number) {
       },
       take: ITEMS_PER_PAGE,
       skip: (page - 1) * ITEMS_PER_PAGE,
-    }),
-    prisma.movement.count({
+    }) as unknown as Movement[],
+    getMovementsCount(user.id, accountId, {
       where: {
-        accountId,
-        userId: user.id,
         date: {
           gte: start,
           lte: end,
         },
       },
     }),
-    prisma.movement.groupBy({
+    getMovementsTotals(user.id, accountId, {
       by: ["type"],
       where: {
-        accountId,
-        userId: user.id,
         date: {
           gte: start,
           lte: end,
         },
-      },
-      _sum: {
-        amount: true,
       },
     }),
   ]);
@@ -139,8 +146,10 @@ export default async function AccountPage({
   const searchParams = await searchParamsPromise;
   const month = searchParams.month ?? new Date().toISOString().slice(0, 7);
   const page = searchParams.page ? Number(searchParams.page) : 1;
+  const data = await getData(accountId, month, page);
+
   const { account, totalIncome, totalExpenses, movements, totalMovements } =
-    await getData(accountId, month, page);
+    data;
 
   return (
     <>

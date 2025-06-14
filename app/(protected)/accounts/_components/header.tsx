@@ -16,7 +16,9 @@ export function AccountsHeader() {
           <IconSquareRoundedPlusFilled className="size-6" />
         </Button>
       </div>
-      <AccountModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      {isOpen && (
+        <AccountModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      )}
     </AppHeader>
   );
 }

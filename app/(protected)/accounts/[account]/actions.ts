@@ -19,44 +19,49 @@ export async function mutateMovement(initialState: any, formData: FormData) {
     return {
       ...data,
       success: false,
-      error: result.error.flatten().fieldErrors,
+      error: {
+        ...result.error.flatten().fieldErrors,
+        message: "Invalid form data",
+      },
     };
   }
 
   try {
-    const account = await getAccountById(result.data.accountId);
+    const account = await getAccountById(user.id, result.data.accountId);
 
     if (!account) {
       return redirect("/accounts");
     }
 
     const id = formData.get("id");
-    const movementData = {
-      ...result.data,
-    };
 
     if (id) {
-      await updateMovement(id as string, account, movementData);
+      const { title, amount, categoryId, description } = result.data;
+      await updateMovement(user.id, id as string, {
+        title,
+        amount,
+        categoryId,
+        description,
+      });
 
       revalidatePath(`/accounts/${account.id}`);
       return {
         ...data,
         success: true,
         error: null,
-        message: "Movement updated successfully",
       };
     } else {
-      await createMovement(account, movementData);
+      await createMovement(user.id, result.data);
 
       revalidatePath(`/accounts/${account.id}`);
       return {
         ...data,
         success: true,
         error: null,
-        message: "Movement added successfully",
       };
     }
   } catch (error) {
+    console.error(">>>", error);
     return {
       ...data,
       success: false,

@@ -1,83 +1,65 @@
 import { prisma } from "@/lib/prisma";
 import { Account, Prisma } from "@prisma/client";
-import { getLoggedUser } from "./session";
-import { redirect } from "next/navigation";
 
-type AccountsWithInclude<T extends Prisma.AccountFindManyArgs> =
-  Prisma.AccountGetPayload<{
-    select: T["select"];
-  }>;
-
-export async function getAccounts<T extends Prisma.AccountFindManyArgs>(
-  _options: T
+export async function getAccounts(
+  userId: string,
+  _options: Prisma.AccountFindManyArgs
 ) {
-  const user = await getLoggedUser();
-
-  if (!user?.id) {
-    return redirect("/login");
-  }
-
   const options = {
     ..._options,
     where: {
       ..._options.where,
-      userId: user.id,
+      userId,
     },
   };
 
   const accounts = await prisma.account.findMany(options);
 
-  return accounts as unknown as AccountsWithInclude<T>[];
+  return accounts;
 }
 
-export async function getAccountById(id: string) {
-  const user = await getLoggedUser();
-
-  if (!user?.id) {
-    return redirect("/login");
+export async function getAccountById(
+  userId: string,
+  id: string,
+  _options?: Omit<Prisma.AccountFindUniqueArgs, "where"> & {
+    where?: Prisma.AccountFindUniqueArgs["where"];
   }
-
-  const account = await prisma.account.findUnique({
+) {
+  const options = {
+    ...(_options ?? {}),
     where: {
+      ...(_options?.where ?? {}),
       id,
-      userId: user.id,
+      userId,
     },
-  });
+  };
+
+  const account = await prisma.account.findUnique(options);
   return account;
 }
 
 export async function createAccount(
+  userId: string,
   data: Omit<Prisma.AccountUncheckedCreateInput, "userId">
 ) {
-  const user = await getLoggedUser();
-
-  if (!user?.id) {
-    return redirect("/login");
-  }
-
   const account = await prisma.account.create({
     data: {
       ...data,
-      userId: user.id,
+      userId,
     },
   });
   return account;
 }
 
 export async function updateAccount(
+  userId: string,
   id: Account["id"],
   data: Omit<Prisma.AccountUncheckedUpdateInput, "userId">
 ) {
-  const user = await getLoggedUser();
-
-  if (!user?.id) {
-    return redirect("/login");
-  }
-
   const account = await prisma.account.update({
     where: {
       id,
-      userId: user.id,
+      userId,
     },
     data: {
       ...data,
@@ -85,4 +67,34 @@ export async function updateAccount(
   });
 
   return account;
+}
+
+export async function updateBalance(
+  userId: string,
+  id: string,
+  amount: number,
+  tx?: Prisma.TransactionClient
+) {
+  const account = await (tx ?? prisma).account.findUnique({
+    where: {
+      id,
+      userId,
+    },
+  });
+
+  if (!account) {
+    throw new Error("Account not found");
+  }
+
+  const balance = account!.balance + amount;
+
+  return (tx ?? prisma).account.update({
+    where: {
+      id,
+      userId,
+    },
+    data: {
+      balance,
+    },
+  });
 }

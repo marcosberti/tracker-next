@@ -20,11 +20,12 @@ import { mutateMovement } from "../actions";
 import { MOVEMENT_TYPES_OPTIONS } from "@/app/_schemas/movement";
 import { useCurrencies } from "@/hooks/use-currencies";
 import { useCategories } from "@/hooks/use-categories";
-import { ScopedMovement } from "../page";
+import { Movement } from "../page";
+import { useSession } from "next-auth/react";
 
 type CreateModalProps = {
   isOpen: boolean;
-  movement?: ScopedMovement | null;
+  movement?: Movement | null;
   account: Pick<Account, "id" | "name"> & {
     currency: Pick<Currency, "id" | "code">;
   };
@@ -37,8 +38,14 @@ export function MovementModal({
   account,
   onClose,
 }: CreateModalProps) {
-  const { isFetching: isFetchingCurrencies, currencies } = useCurrencies();
-  const { isFetching: isFetchingCategories, categories } = useCategories();
+  const isEditing = Boolean(movement);
+  const { data: session } = useSession();
+  const { isFetching: isFetchingCurrencies, currencies } = useCurrencies(
+    session!.user!.id as string
+  );
+  const { isFetching: isFetchingCategories, categories } = useCategories(
+    session!.user!.id as string
+  );
   const [state, formAction, isPending, reset] = useResetableActionState(
     mutateMovement,
     {
@@ -49,7 +56,6 @@ export function MovementModal({
         : new Date().toISOString().slice(0, 10),
       error: null,
       success: false,
-      message: "",
       title: movement?.title ?? "",
       amount: movement?.amount ?? null,
       type: movement?.type ?? "",
@@ -61,19 +67,25 @@ export function MovementModal({
   useEffect(() => {
     if (state?.success) {
       startTransition(() => {
-        const action = movement ? "updated" : "added";
+        const action = isEditing ? "updated" : "added";
         toast.success(`Movement ${action} successfully`);
         reset();
         onClose();
       });
     }
-  }, [state?.success, onClose]);
+  }, [state?.success, onClose, isEditing]);
+
+  useEffect(() => {
+    if (!state?.success && state?.error?.message) {
+      toast.error(state.error.message);
+    }
+  }, [state]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{movement ? "Update" : "Add"} movement</DialogTitle>
+          <DialogTitle>{isEditing ? "Update" : "Add"} movement</DialogTitle>
         </DialogHeader>
 
         {isFetchingCurrencies || isFetchingCategories ? (
@@ -103,6 +115,7 @@ export function MovementModal({
                 <Input
                   type="date"
                   name="date"
+                  disabled={isEditing}
                   defaultValue={(state?.date as string) ?? ""}
                 />
                 {state?.error?.date && <Error>{state?.error.date[0]}</Error>}
@@ -127,7 +140,7 @@ export function MovementModal({
                 <Select
                   name="currencyId"
                   placeholder="Select a currency"
-                  disabled={!currencies.length}
+                  disabled={!currencies.length || isEditing}
                   defaultValue={(state?.currencyId as string) ?? undefined}
                   options={currencies.map((currency) => ({
                     value: currency.id,
@@ -146,6 +159,7 @@ export function MovementModal({
                 <Select
                   name="type"
                   placeholder="Select a type"
+                  disabled={isEditing}
                   defaultValue={(state?.type as string) ?? undefined}
                   options={MOVEMENT_TYPES_OPTIONS.map((type) => ({
                     value: type,
@@ -159,6 +173,7 @@ export function MovementModal({
                 <Select
                   name="accountId"
                   placeholder="Select an account"
+                  disabled={isEditing}
                   defaultValue={(state?.accountId as string) ?? undefined}
                   options={[
                     {

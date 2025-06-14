@@ -1,3 +1,4 @@
+"use client";
 import { startTransition, useEffect } from "react";
 import { mutateAccount } from "../actions";
 import {
@@ -17,6 +18,7 @@ import { useResetableActionState } from "@/hooks/use-resetable-action-state";
 import { toast } from "sonner";
 import { AccountType } from "../page";
 import { useCurrencies } from "@/hooks/use-currencies";
+import { useSession } from "next-auth/react";
 
 type CreateModalProps = {
   isOpen: boolean;
@@ -24,7 +26,9 @@ type CreateModalProps = {
   account?: AccountType | null;
 };
 export function AccountModal({ isOpen, account, onClose }: CreateModalProps) {
-  const { isFetching, currencies } = useCurrencies();
+  const isEditing = Boolean(account);
+  const { data: session } = useSession();
+  const { isFetching, currencies } = useCurrencies(session!.user!.id as string);
 
   const [state, formAction, isPending, reset] = useResetableActionState(
     mutateAccount,
@@ -86,7 +90,7 @@ export function AccountModal({ isOpen, account, onClose }: CreateModalProps) {
                 <Label htmlFor="currencyId">Currency</Label>
                 <Select
                   name="currencyId"
-                  disabled={!currencies.length}
+                  disabled={!currencies.length || isEditing}
                   defaultValue={(state?.currencyId as string) ?? undefined}
                   placeholder="Select a currency"
                   options={currencies.map((currency) => ({
@@ -105,6 +109,7 @@ export function AccountModal({ isOpen, account, onClose }: CreateModalProps) {
                 type="number"
                 name="balance"
                 min={0}
+                disabled={isEditing}
                 defaultValue={state?.balance ?? ""}
               />
               {state?.error?.balance && (

@@ -13,14 +13,12 @@ import {
   IconCashBanknote,
   IconSquareRoundedPlusFilled,
 } from "@tabler/icons-react";
-import { Account, Currency } from "@prisma/client";
+import type { Account } from "../page";
 import { MovementModal } from "./movement-modal";
 import { useState } from "react";
 
 type AccountHeaderProps = {
-  account: Pick<Account, "id" | "name"> & {
-    currency: Pick<Currency, "id" | "code">;
-  };
+  account: Account;
 };
 
 export function AccountHeader({ account }: AccountHeaderProps) {
