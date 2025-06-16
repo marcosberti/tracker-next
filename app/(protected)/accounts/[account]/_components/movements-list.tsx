@@ -59,8 +59,8 @@ export function MovementsList({
   const router = useRouter();
 
   return (
-    <>
-      <div className="overflow-hidden rounded-lg border">
+    <div className="flex flex-col gap-2">
+      <div className="@container overflow-hidden rounded-lg border">
         <Table>
           <TableHeader className="bg-muted sticky top-0 z-10">
             <TableRow>
@@ -126,10 +126,19 @@ export function MovementsList({
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right pr-4">
-                    <span className="font-semibold">
-                      {formatCurrency(movement.amount, movement.currency.code)}
-                    </span>
+                  <TableCell className="pr-4">
+                    <div className="flex justify-end flex-col items-end @lg:flex-row @lg:gap-1 @lg:items-center">
+                      <span className="font-semibold">
+                        {formatCurrency(
+                          movement.amount,
+                          movement.currency.code,
+                          false
+                        )}
+                      </span>
+                      <small className="text-muted-foreground">
+                        {movement.currency.code}
+                      </small>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -192,6 +201,6 @@ export function MovementsList({
           }}
         />
       )}
-    </>
+    </div>
   );
 }

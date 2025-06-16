@@ -13,3 +13,15 @@ export const categorySchema = z.object({
 });
 
 export type CategorySchema = z.infer<typeof categorySchema>;
+
+export function parseFormData(formData: FormData) {
+  const data = {
+    name: formData.get("name"),
+    icon: formData.get("icon"),
+    color: formData.get("color"),
+  };
+
+  const result = categorySchema.safeParse(data);
+
+  return { data, result };
+}

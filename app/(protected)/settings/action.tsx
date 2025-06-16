@@ -1,67 +1,51 @@
 "use server";
-import { currencySchema } from "@/app/_schemas/currency";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { parseFormData as parseCurrencyFormData } from "@/app/_schemas/currency";
 import { redirect } from "next/navigation";
-import { User } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { categorySchema } from "@/app/_schemas/category";
+import { parseFormData as parseCategoryFormData } from "@/app/_schemas/category";
+import { getLoggedUser } from "@/app/_db/session";
+import { updateCurrency, createCurrency } from "@/app/_db/currencies";
+import { createCategory, updateCategory } from "@/app/_db/categories";
 
 export async function revalidateSettings() {
   revalidatePath("/settings");
 }
 
 export async function mutateCurrency(prevState: any, formData: FormData) {
-  const session = await auth();
+  const user = await getLoggedUser();
 
-  if (!session?.user) {
+  if (!user?.id) {
     return redirect("/login");
   }
 
-  const user = session.user as User;
-
-  const data = {
-    name: formData.get("name"),
-    code: formData.get("code"),
-  };
-
-  const result = currencySchema.safeParse(data);
+  const { data, result } = parseCurrencyFormData(formData);
 
   if (!result.success) {
     return {
-      name: data.name,
-      code: data.code,
+      ...data,
+      success: false,
       error: { ...result.error.flatten().fieldErrors, message: null },
     };
   }
 
   try {
     const id = formData.get("id");
-    const currency = await prisma.currency.upsert({
-      where: {
-        id: id as string,
-        userId: user.id,
-      },
-      create: {
-        userId: user.id,
-        name: result.data.name,
-        code: result.data.code,
-      },
-      update: {
-        name: result.data.name,
-      },
-    });
+    if (id) {
+      await updateCurrency(user.id, id as string, result.data);
+    } else {
+      await createCurrency(user.id, result.data);
+    }
 
     revalidatePath("/settings");
     return {
-      currency,
+      ...data,
       success: true,
       error: null,
     };
   } catch (error) {
     return {
-      name: data.name,
-      code: data.code,
+      ...data,
+      success: false,
       error: {
         name: null,
         code: null,
@@ -72,62 +56,40 @@ export async function mutateCurrency(prevState: any, formData: FormData) {
 }
 
 export async function mutateCategory(prevState: any, formData: FormData) {
-  const session = await auth();
+  const user = await getLoggedUser();
 
-  if (!session?.user) {
+  if (!user?.id) {
     return redirect("/login");
   }
 
-  const user = session.user as User;
-
-  const data = {
-    name: formData.get("name"),
-    icon: formData.get("icon"),
-    color: formData.get("color"),
-  };
-
-  const result = categorySchema.safeParse(data);
+  const { data, result } = parseCategoryFormData(formData);
 
   if (!result.success) {
     return {
-      name: data.name,
-      icon: data.icon,
-      color: data.color,
+      ...data,
+      success: false,
       error: { ...result.error.flatten().fieldErrors, message: null },
     };
   }
 
   try {
     const id = formData.get("id");
-    const category = await prisma.category.upsert({
-      where: {
-        id: id as string,
-        userId: user.id,
-      },
-      create: {
-        userId: user.id,
-        name: result.data.name,
-        icon: result.data.icon,
-        color: result.data.color,
-      },
-      update: {
-        name: result.data.name,
-        icon: result.data.icon,
-        color: result.data.color,
-      },
-    });
+    if (id) {
+      await updateCategory(user.id, id as string, result.data);
+    } else {
+      await createCategory(user.id, result.data);
+    }
 
     revalidatePath("/settings");
     return {
-      category,
+      ...data,
       success: true,
       error: null,
     };
   } catch (error) {
     return {
-      name: data.name,
-      icon: data.icon,
-      color: data.color,
+      ...data,
+      success: false,
       error: {
         name: null,
         icon: null,

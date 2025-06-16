@@ -172,15 +172,22 @@ function SelectScrollDownButton({
 }
 
 type SelectProps = React.ComponentProps<typeof SelectPrimitive.Root> & {
-  placeholder: string;
+  placeholder?: string;
   options: { value: string; label: string }[];
   children?: React.ReactNode;
+  readOnly?: boolean;
 };
 
-function Select({ placeholder, options, children, ...props }: SelectProps) {
+function Select({
+  placeholder,
+  options,
+  children,
+  readOnly,
+  ...props
+}: SelectProps) {
   return (
     <SchSelect {...props}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger className="w-full" disabled={readOnly}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

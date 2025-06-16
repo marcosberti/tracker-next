@@ -1,5 +1,5 @@
 "use client";
-import { startTransition, useEffect } from "react";
+import { startTransition, useActionState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,12 +13,10 @@ import { Account, Currency } from "@prisma/client";
 import { Select } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useResetableActionState } from "@/hooks/use-resetable-action-state";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { mutateMovement } from "../actions";
 import { MOVEMENT_TYPES_OPTIONS } from "@/app/_schemas/movement";
-import { useCurrencies } from "@/hooks/use-currencies";
 import { useCategories } from "@/hooks/use-categories";
 import { Movement } from "../page";
 import { useSession } from "next-auth/react";
@@ -40,36 +38,31 @@ export function MovementModal({
 }: CreateModalProps) {
   const isEditing = Boolean(movement);
   const { data: session } = useSession();
-  const { isFetching: isFetchingCurrencies, currencies } = useCurrencies(
-    session!.user!.id as string
-  );
   const { isFetching: isFetchingCategories, categories } = useCategories(
     session!.user!.id as string
   );
-  const [state, formAction, isPending, reset] = useResetableActionState(
-    mutateMovement,
-    {
-      accountId: account.id,
-      currencyId: movement?.currency.id ?? account.currency.id,
-      date: movement?.date
-        ? new Date(movement.date).toISOString().slice(0, 10)
-        : new Date().toISOString().slice(0, 10),
-      error: null,
-      success: false,
-      title: movement?.title ?? "",
-      amount: movement?.amount ?? null,
-      type: movement?.type ?? "",
-      categoryId: movement?.category.id ?? "",
-      description: movement?.description ?? "",
-    }
-  );
+  const [state, formAction, isPending] = useActionState(mutateMovement, {
+    accountId: account.id,
+    currencyId: movement?.currency.id ?? account.currency.id,
+    date: movement?.date
+      ? new Date(movement.date).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
+    error: null,
+    success: false,
+    title: movement?.title ?? "",
+    amount: movement?.amount ?? null,
+    type: movement?.type ?? "",
+    categoryId: movement?.category.id ?? "",
+    description: movement?.description ?? "",
+    fixedExpenseId: movement?.fixedExpenseId ?? "",
+    installmentExpenseId: movement?.installmentExpenseId ?? "",
+  });
 
   useEffect(() => {
     if (state?.success) {
       startTransition(() => {
         const action = isEditing ? "updated" : "added";
         toast.success(`Movement ${action} successfully`);
-        reset();
         onClose();
       });
     }
@@ -81,6 +74,8 @@ export function MovementModal({
     }
   }, [state]);
 
+  console.log(">>>state", state);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
@@ -88,7 +83,7 @@ export function MovementModal({
           <DialogTitle>{isEditing ? "Update" : "Add"} movement</DialogTitle>
         </DialogHeader>
 
-        {isFetchingCurrencies || isFetchingCategories ? (
+        {isFetchingCategories ? (
           <div className="flex items-center justify-center">
             <Loader2 className="size-10 animate-spin" />
           </div>
@@ -99,6 +94,16 @@ export function MovementModal({
             noValidate
           >
             <input type="hidden" name="id" value={movement?.id ?? ""} />
+            <input
+              type="hidden"
+              name="fixedExpenseId"
+              value={movement?.fixedExpenseId ?? ""}
+            />
+            <input
+              type="hidden"
+              name="installmentExpenseId"
+              value={movement?.installmentExpenseId ?? ""}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2 lg:col-span-1">
@@ -138,14 +143,16 @@ export function MovementModal({
               <div className="space-y-2 col-span-2 lg:col-span-1">
                 <Label htmlFor="currencyId">Currency</Label>
                 <Select
+                  readOnly
                   name="currencyId"
                   placeholder="Select a currency"
-                  disabled={!currencies.length || isEditing}
-                  defaultValue={(state?.currencyId as string) ?? undefined}
-                  options={currencies.map((currency) => ({
-                    value: currency.id,
-                    label: currency.name,
-                  }))}
+                  value={account.currency.id}
+                  options={[
+                    {
+                      value: account.currency.id,
+                      label: account.currency.code,
+                    },
+                  ]}
                 />
                 {state?.error?.currencyId && (
                   <Error>{state?.error.currencyId[0]}</Error>
@@ -159,7 +166,7 @@ export function MovementModal({
                 <Select
                   name="type"
                   placeholder="Select a type"
-                  disabled={isEditing}
+                  readOnly={isEditing}
                   defaultValue={(state?.type as string) ?? undefined}
                   options={MOVEMENT_TYPES_OPTIONS.map((type) => ({
                     value: type,
@@ -171,10 +178,10 @@ export function MovementModal({
               <div className="space-y-2 col-span-2 lg:col-span-1">
                 <Label htmlFor="accountId">Account</Label>
                 <Select
+                  readOnly
                   name="accountId"
                   placeholder="Select an account"
-                  disabled={isEditing}
-                  defaultValue={(state?.accountId as string) ?? undefined}
+                  value={account.id}
                   options={[
                     {
                       value: account.id,

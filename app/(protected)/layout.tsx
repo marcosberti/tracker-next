@@ -21,7 +21,7 @@ export default async function ProtectedLayout({
       <SidebarProvider>
         <AppSidebar variant="inset" />
         <SidebarInset>{children}</SidebarInset>
-        <Toaster />
+        <Toaster richColors />
       </SidebarProvider>
     </QueryProvider>
   );

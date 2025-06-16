@@ -22,7 +22,7 @@ export const movementSchema = z.object({
   installmentExpenseId: z.string().optional(),
 });
 
-export function parseFormData(formData: FormData) {
+export function parseMovement(formData: FormData) {
   const data = {
     title: formData.get("title"),
     date: formData.get("date"),
@@ -32,6 +32,8 @@ export function parseFormData(formData: FormData) {
     accountId: formData.get("accountId"),
     categoryId: formData.get("categoryId"),
     description: formData.get("description"),
+    fixedExpenseId: formData.get("fixedExpenseId"),
+    installmentExpenseId: formData.get("installmentExpenseId"),
   };
 
   const result = movementSchema.safeParse(data);

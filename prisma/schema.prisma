@@ -123,10 +123,11 @@ model InstallmentExpense {
   id                 String @id @default(cuid())
   title              String
   totalAmount        Float
-  installmentAmount  Float
-  totalInstallments  Int
+  amount             Float
+  installments       Int
   paidInstallments   Int    @default(0)
   firstPaymentMonth  DateTime
+  isPaid             Boolean @default(false)
   accountId          String
   currencyId         String
   categoryId         String

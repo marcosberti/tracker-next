@@ -7,12 +7,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { startTransition, useEffect } from "react";
+import { startTransition, useActionState, useEffect } from "react";
 import { mutateCurrency } from "../action";
 import { Error } from "@/components/ui/error";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useResetableActionState } from "@/hooks/use-resetable-action-state";
 import { Currency } from "@prisma/client";
 
 type CurrencyModalProps = {
@@ -26,21 +25,18 @@ export function CurrencyModal({
   currency,
   onClose,
 }: CurrencyModalProps) {
-  const [state, formAction, isPending, reset] = useResetableActionState(
-    mutateCurrency,
-    {
-      name: currency?.name ?? null,
-      code: currency?.code ?? null,
-      error: { name: null, code: null, message: "" },
-    }
-  );
+  const [state, formAction, isPending] = useActionState(mutateCurrency, {
+    name: currency?.name ?? null,
+    code: currency?.code ?? null,
+    success: false,
+    error: { name: null, code: null, message: "" },
+  });
 
   useEffect(() => {
     if (state?.success) {
       startTransition(() => {
-        const action = state.currency ? "updated" : "added";
+        const action = currency ? "updated" : "added";
         toast.success(`Currency ${action} successfully`);
-        reset();
         onClose();
       });
     }

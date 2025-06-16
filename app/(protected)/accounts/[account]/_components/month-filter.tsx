@@ -8,7 +8,7 @@ export function MonthFilter({ month }: { month: string }) {
 
   return (
     <Input
-      className="w-[200px]"
+      className="w-full md:w-[200px]"
       type="month"
       value={month}
       onChange={(e) => {

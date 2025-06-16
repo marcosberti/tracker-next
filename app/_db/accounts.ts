@@ -42,13 +42,12 @@ export async function createAccount(
   userId: string,
   data: Omit<Prisma.AccountUncheckedCreateInput, "userId">
 ) {
-  const account = await prisma.account.create({
+  return prisma.account.create({
     data: {
       ...data,
       userId,
     },
   });
-  return account;
 }
 
 export async function updateAccount(
@@ -56,7 +55,20 @@ export async function updateAccount(
   id: Account["id"],
   data: Omit<Prisma.AccountUncheckedUpdateInput, "userId">
 ) {
-  const account = await prisma.account.update({
+  const select = {
+    id: true,
+  };
+  const account = (await getAccountById(userId, id, {
+    select,
+  })) as unknown as Prisma.AccountGetPayload<{
+    select: typeof select;
+  }>;
+
+  if (!account) {
+    throw new Error("Account not found");
+  }
+
+  return prisma.account.update({
     where: {
       id,
       userId,
@@ -65,8 +77,6 @@ export async function updateAccount(
       ...data,
     },
   });
-
-  return account;
 }
 
 export async function updateBalance(

@@ -10,3 +10,14 @@ export const currencySchema = z.object({
 });
 
 export type CurrencySchema = z.infer<typeof currencySchema>;
+
+export function parseFormData(formData: FormData) {
+  const data = {
+    name: formData.get("name"),
+    code: formData.get("code"),
+  };
+
+  const result = currencySchema.safeParse(data);
+
+  return { data, result };
+}

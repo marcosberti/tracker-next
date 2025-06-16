@@ -1,5 +1,5 @@
 "use client";
-import { startTransition, useEffect } from "react";
+import { startTransition, useActionState, useEffect } from "react";
 import { mutateAccount } from "../actions";
 import {
   Dialog,
@@ -14,7 +14,6 @@ import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useResetableActionState } from "@/hooks/use-resetable-action-state";
 import { toast } from "sonner";
 import { AccountType } from "../page";
 import { useCurrencies } from "@/hooks/use-currencies";
@@ -30,30 +29,26 @@ export function AccountModal({ isOpen, account, onClose }: CreateModalProps) {
   const { data: session } = useSession();
   const { isFetching, currencies } = useCurrencies(session!.user!.id as string);
 
-  const [state, formAction, isPending, reset] = useResetableActionState(
-    mutateAccount,
-    {
-      name: account?.name ?? null,
-      balance: account?.balance ?? 0,
-      currencyId: account?.currency?.id ?? null,
-      isMain: account?.isMain ?? false,
-      success: false,
-      error: {
-        name: null,
-        balance: null,
-        currencyId: null,
-        isMain: null,
-        message: "",
-      },
-    }
-  );
+  const [state, formAction, isPending] = useActionState(mutateAccount, {
+    name: account?.name ?? null,
+    balance: account?.balance ?? 0,
+    currencyId: account?.currency?.id ?? null,
+    isMain: account?.isMain ?? false,
+    success: false,
+    error: {
+      name: null,
+      balance: null,
+      currencyId: null,
+      isMain: null,
+      message: "",
+    },
+  });
 
   useEffect(() => {
     if (state?.success) {
       startTransition(() => {
         const action = account ? "updated" : "added";
         toast.success(`Account ${action} successfully`);
-        reset();
         onClose();
       });
     }
@@ -90,7 +85,8 @@ export function AccountModal({ isOpen, account, onClose }: CreateModalProps) {
                 <Label htmlFor="currencyId">Currency</Label>
                 <Select
                   name="currencyId"
-                  disabled={!currencies.length || isEditing}
+                  disabled={!currencies.length}
+                  readOnly={isEditing}
                   defaultValue={(state?.currencyId as string) ?? undefined}
                   placeholder="Select a currency"
                   options={currencies.map((currency) => ({

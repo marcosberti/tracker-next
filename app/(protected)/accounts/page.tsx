@@ -1,9 +1,10 @@
-import { AccountsHeader } from "./_components/header";
 import { AccountsList } from "./_components/accounts-list";
 import { getAccounts } from "@/app/_db/accounts";
 import { Prisma } from "@prisma/client";
 import { getLoggedUser } from "@/app/_db/session";
 import { redirect } from "next/navigation";
+import { AppHeader } from "@/components/app-header";
+import { AddAccount } from "./_components/add-account";
 
 const ACCOUNT_SELECT = {
   id: true,
@@ -45,7 +46,12 @@ export default async function AccountsPage() {
 
   return (
     <>
-      <AccountsHeader />
+      <AppHeader>
+        <h1>Accounts</h1>
+        <div className="ml-auto">
+          <AddAccount />
+        </div>
+      </AppHeader>
       <AccountsList accounts={accounts} />
     </>
   );

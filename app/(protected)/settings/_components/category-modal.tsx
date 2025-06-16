@@ -7,12 +7,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { startTransition, useEffect, useRef, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { mutateCategory } from "../action";
 import { Error } from "@/components/ui/error";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useResetableActionState } from "@/hooks/use-resetable-action-state";
 import { Category } from "@prisma/client";
 import { ICONS_MAP } from "@/lib/icons";
 
@@ -31,22 +36,19 @@ export function CategoryModal({
     category?.icon ?? null
   );
   const formRef = useRef<HTMLFormElement>(null);
-  const [state, formAction, isPending, reset] = useResetableActionState(
-    mutateCategory,
-    {
-      name: category?.name ?? null,
-      icon: category?.icon ?? null,
-      color: category?.color ?? null,
-      error: { name: null, icon: null, color: null, message: "" },
-    }
-  );
+  const [state, formAction, isPending] = useActionState(mutateCategory, {
+    name: category?.name ?? null,
+    icon: category?.icon ?? null,
+    color: category?.color ?? null,
+    success: false,
+    error: { name: null, icon: null, color: null, message: "" },
+  });
 
   useEffect(() => {
     if (state?.success) {
       startTransition(() => {
-        const action = state.category ? "updated" : "added";
+        const action = category ? "updated" : "added";
         toast.success(`Category ${action} successfully`);
-        reset();
         onClose();
       });
     }

@@ -1,7 +1,8 @@
-import { Account, Movement, Prisma } from "@prisma/client";
+import { Movement, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { updateBalance } from "./accounts";
 import { MOVEMENT_TYPES } from "../_schemas/movement";
+import { updatePaidInstallment } from "./installment-expenses";
 
 export async function createMovement(
   userId: string,
@@ -65,6 +66,31 @@ export async function updateMovement(
       oldAmount + amount,
       tx
     );
+  });
+}
+
+export async function payInstallment(
+  userId: string,
+  data: Omit<Prisma.MovementUncheckedCreateInput, "userId"> & {
+    installmentExpenseId: string;
+  }
+) {
+  return prisma.$transaction(async (tx) => {
+    await tx.movement.create({
+      data: {
+        ...data,
+        userId,
+      },
+    });
+    await updatePaidInstallment(
+      userId,
+      data.accountId,
+      data.installmentExpenseId,
+      tx
+    );
+
+    const amount = data.amount * -1;
+    await updateBalance(userId, data.accountId, amount, tx);
   });
 }
 

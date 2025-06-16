@@ -1,22 +1,33 @@
-import { SettingsHeader } from "./_components/header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { prisma } from "@/lib/prisma";
 import { CurrenciesList } from "./_components/currencies-list";
 import { CategoriesList } from "./_components/categories-list";
+import { getCurrencies } from "@/app/_db/currencies";
+import { getLoggedUser } from "@/app/_db/session";
+import { redirect } from "next/navigation";
+import { getCategories } from "@/app/_db/categories";
+import { AppHeader } from "@/components/app-header";
+import { AddCurrency } from "./_components/add-currency";
+import { AddCategory } from "./_components/add-category";
 
 async function getData() {
+  const user = await getLoggedUser();
+  if (!user?.id) {
+    return redirect("/login");
+  }
+
   const [currencies, categories] = await Promise.all([
-    prisma.currency.findMany({
+    getCurrencies(user.id, {
       orderBy: {
         name: "asc",
       },
     }),
-    prisma.category.findMany({
+    getCategories(user.id, {
       orderBy: {
         name: "asc",
       },
     }),
   ]);
+
   return { currencies, categories };
 }
 
@@ -25,23 +36,27 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <SettingsHeader />
-
-      <div className="@container/main flex flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-4 p-4 md:gap-4 md:p-6">
-          <Tabs defaultValue="currencies" className="w-full">
-            <TabsList>
-              <TabsTrigger value="currencies">Currencies</TabsTrigger>
-              <TabsTrigger value="categories">Categories</TabsTrigger>
-            </TabsList>
-            <TabsContent value="currencies">
-              <CurrenciesList currencies={currencies} />
-            </TabsContent>
-            <TabsContent value="categories">
-              <CategoriesList categories={categories} />
-            </TabsContent>
-          </Tabs>
+      <AppHeader>
+        <h1>Settings</h1>
+        <div className="ml-auto flex gap-2 items-center">
+          <AddCurrency />
+          <AddCategory />
         </div>
+      </AppHeader>
+
+      <div className="@container/main flex flex-1 flex-col gap-4 p-4 md:gap-4 md:p-6">
+        <Tabs defaultValue="currencies" className="w-full">
+          <TabsList>
+            <TabsTrigger value="currencies">Currencies</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+          </TabsList>
+          <TabsContent value="currencies">
+            <CurrenciesList currencies={currencies} />
+          </TabsContent>
+          <TabsContent value="categories">
+            <CategoriesList categories={categories} />
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );
